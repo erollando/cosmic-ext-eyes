@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Name=Eyes
+Comment=A pair of cartoon eyes that follow the cursor
+Exec=cosmic-ext-eyes
+Icon=input-mouse
+Type=Application
+Categories=COSMIC;
+Keywords=COSMIC;Iced;applet;
+Terminal=false
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicShrinkable=true
+X-HostWaylandDisplay=true

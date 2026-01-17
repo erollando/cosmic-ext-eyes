@@ -7,6 +7,12 @@ install: build
     cp target/release/cosmic-ext-eyes ~/.local/bin/cosmic-ext-eyes
     chmod 0755 ~/.local/bin/cosmic-ext-eyes
 
+    # Install icons (scalable + symbolic).
+    mkdir -p ~/.local/share/icons/hicolor/scalable/apps
+    cp dist/com.xinia.CosmicAppletEyes.svg ~/.local/share/icons/hicolor/scalable/apps/com.xinia.CosmicAppletEyes.svg
+    cp dist/com.xinia.CosmicAppletEyes-symbolic.svg ~/.local/share/icons/hicolor/scalable/apps/com.xinia.CosmicAppletEyes-symbolic.svg
+    gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor >/dev/null 2>&1 || true
+
     # Ensure the desktop entry directory exists
     mkdir -p ~/.local/share/applications
 

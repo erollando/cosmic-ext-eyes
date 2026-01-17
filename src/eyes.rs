@@ -3,10 +3,13 @@ use cosmic::iced::widget::canvas::{self, Canvas, Geometry, Path};
 use cosmic::iced::{Color, Point, Rectangle, Size, Vector};
 use cosmic::Element;
 
+const CANVAS_INSET: f32 = 1.0;
+
 #[derive(Debug)]
 pub struct Eyes {
     left_pupil_offset: Vector,
     right_pupil_offset: Vector,
+    cursor_known: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -21,17 +24,13 @@ impl Eyes {
         Self {
             left_pupil_offset: Vector::new(0.0, 0.0),
             right_pupil_offset: Vector::new(0.0, 0.0),
+            cursor_known: false,
         }
     }
 
     pub fn tick(&mut self, cursor: Option<Point>, window_size: Size, dt: f32) {
-        let layout = layout_for(window_size);
-
-        let center = Point::new(window_size.width / 2.0, window_size.height / 2.0);
-        let left_eye_center =
-            Point::new(center.x - layout.eye_radius - layout.eye_spacing / 2.0, center.y);
-        let right_eye_center =
-            Point::new(center.x + layout.eye_radius + layout.eye_spacing / 2.0, center.y);
+        self.cursor_known = cursor.is_some();
+        let (layout, left_eye_center, right_eye_center) = layout_and_centers(window_size);
 
         // If we don't have pointer position, keep pupils centered (not looking inward).
         let left_target = cursor.unwrap_or(left_eye_center);
@@ -78,6 +77,23 @@ fn layout_for(size: Size) -> Layout {
     Layout { eye_radius, pupil_radius, eye_spacing }
 }
 
+fn layout_and_centers(size: Size) -> (Layout, Point, Point) {
+    let inset = CANVAS_INSET;
+    let w = (size.width - inset * 2.0).max(1.0);
+    let h = (size.height - inset * 2.0).max(1.0);
+
+    let usable_size = Size::new(w, h);
+    let layout = layout_for(usable_size);
+
+    let center = Point::new(inset + usable_size.width / 2.0, inset + usable_size.height / 2.0);
+    let left_eye_center =
+        Point::new(center.x - layout.eye_radius - layout.eye_spacing / 2.0, center.y);
+    let right_eye_center =
+        Point::new(center.x + layout.eye_radius + layout.eye_spacing / 2.0, center.y);
+
+    (layout, left_eye_center, right_eye_center)
+}
+
 fn pupil_offset(
     eye_center: Point,
     cursor: Point,
@@ -117,15 +133,13 @@ impl canvas::Program<crate::Message, cosmic::Theme, cosmic::Renderer> for &Eyes 
         _cursor: mouse::Cursor,
     ) -> Vec<Geometry> {
         let mut frame = canvas::Frame::new(renderer, bounds.size());
-        let center = frame.center();
+        let (layout, left_eye_center, right_eye_center) = layout_and_centers(bounds.size());
 
-        let layout = layout_for(bounds.size());
-        let left_eye_center =
-            Point::new(center.x - layout.eye_radius - layout.eye_spacing / 2.0, center.y);
-        let right_eye_center =
-            Point::new(center.x + layout.eye_radius + layout.eye_spacing / 2.0, center.y);
-
-        let sclera = Color::from_rgb8(250, 250, 250);
+        let sclera = if self.cursor_known {
+            Color::from_rgb8(250, 250, 250)
+        } else {
+            Color::from_rgb8(160, 190, 255)
+        };
         let outline = Color::from_rgb8(24, 24, 24);
         let shadow = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.12 };
         let highlight = Color { r: 1.0, g: 1.0, b: 1.0, a: 0.22 };

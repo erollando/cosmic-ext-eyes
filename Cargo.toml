@@ -1,7 +1,10 @@
 [package]
 name = "cosmic-ext-eyes"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
+license = "GPL-3.0"
+authors = ["e.rollando <e.rollando@duck.com>"]
+
 
 [dependencies]
 cosmic = { package = "libcosmic", git = "https://github.com/pop-os/libcosmic", rev = "b0cbb54bf2b3528c895f7636c7ad1fd520fd2a9e", features = ["applet"] }

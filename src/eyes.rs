@@ -4,6 +4,15 @@ use cosmic::iced::{Color, Point, Rectangle, Size, Vector};
 use cosmic::Element;
 
 const CANVAS_INSET: f32 = 1.0;
+const SNAP_SCALE: f32 = 2.0; // snap to half-pixels
+
+fn snap_f(value: f32) -> f32 {
+    (value * SNAP_SCALE).round() / SNAP_SCALE
+}
+
+fn snap_point(point: Point) -> Point {
+    Point::new(snap_f(point.x), snap_f(point.y))
+}
 
 #[derive(Debug)]
 pub struct Eyes {
@@ -65,14 +74,16 @@ fn layout_for(size: Size) -> Layout {
     let h = size.height.max(1.0);
 
     let min_dim = w.min(h);
-    let eye_spacing = (min_dim * 0.12).clamp(2.0, 10.0);
+    // Round to whole logical pixels so the two eyes land on stable subpixel positions.
+    let eye_spacing = (min_dim * 0.12).clamp(2.0, 10.0).round();
 
     // Two eyes side-by-side: total width is roughly `4r + spacing`.
     let max_r_by_width = ((w - eye_spacing) / 4.0).max(1.0);
     let max_r_by_height = (h * 0.45).max(1.0);
 
-    let eye_radius = max_r_by_width.min(max_r_by_height).clamp(6.0, 32.0);
-    let pupil_radius = (eye_radius * 0.38).clamp(2.0, eye_radius.max(2.0) - 1.0);
+    let eye_radius = snap_f(max_r_by_width.min(max_r_by_height).clamp(6.0, 32.0));
+    let pupil_radius =
+        snap_f((eye_radius * 0.38).clamp(2.0, eye_radius.max(2.0) - 1.0));
 
     Layout { eye_radius, pupil_radius, eye_spacing }
 }
@@ -147,9 +158,17 @@ impl canvas::Program<crate::Message, cosmic::Theme, cosmic::Renderer> for &Eyes 
         let pupil_highlight = Color { r: 1.0, g: 1.0, b: 1.0, a: 0.30 };
 
         let mut draw_eye = |center: Point, pupil_offset: Vector| {
+            let center = snap_point(center);
             let pupil_center = center + pupil_offset;
 
-            frame.fill(&Path::circle(center, layout.eye_radius), sclera);
+            frame.fill(
+                &Path::circle(center, layout.eye_radius),
+                sclera,
+            );
+            frame.stroke(
+                &Path::circle(center, layout.eye_radius - 0.5),
+                canvas::Stroke::default().with_width(1.0).with_color(outline),
+            );
             frame.fill(
                 &Path::circle(
                     Point::new(
@@ -169,11 +188,6 @@ impl canvas::Program<crate::Message, cosmic::Theme, cosmic::Renderer> for &Eyes 
                     layout.eye_radius * 0.55,
                 ),
                 highlight,
-            );
-
-            frame.stroke(
-                &Path::circle(center, layout.eye_radius),
-                canvas::Stroke::default().with_width(1.0).with_color(outline),
             );
 
             frame.fill(&Path::circle(pupil_center, layout.pupil_radius), pupil);

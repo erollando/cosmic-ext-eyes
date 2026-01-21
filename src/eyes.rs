@@ -14,6 +14,18 @@ fn snap_point(point: Point) -> Point {
     Point::new(snap_f(point.x), snap_f(point.y))
 }
 
+fn clamp_radius_inside_circle(
+    container_center: Point,
+    container_radius: f32,
+    shape_center: Point,
+    desired_radius: f32,
+) -> f32 {
+    let dx = shape_center.x - container_center.x;
+    let dy = shape_center.y - container_center.y;
+    let max = (container_radius - (dx * dx + dy * dy).sqrt()).max(0.0);
+    desired_radius.min(max)
+}
+
 #[derive(Debug)]
 pub struct Eyes {
     left_pupil_offset: Vector,
@@ -160,32 +172,49 @@ impl canvas::Program<crate::Message, cosmic::Theme, cosmic::Renderer> for &Eyes 
         let mut draw_eye = |center: Point, pupil_offset: Vector| {
             let center = snap_point(center);
             let pupil_center = center + pupil_offset;
+            let inner_r = (layout.eye_radius - 1.0).max(0.0);
 
             frame.fill(
                 &Path::circle(center, layout.eye_radius),
                 sclera,
             );
+
             frame.stroke(
                 &Path::circle(center, layout.eye_radius - 0.5),
                 canvas::Stroke::default().with_width(1.0).with_color(outline),
             );
-            frame.fill(
-                &Path::circle(
-                    Point::new(
-                        center.x + layout.eye_radius * 0.10,
-                        center.y + layout.eye_radius * 0.12,
-                    ),
-                    layout.eye_radius * 0.95,
-                ),
-                shadow,
+
+            // These highlights must stay inside the sclera (Canvas has no path-clip),
+            // otherwise semi-transparent pixels "bleed" outside the outline.
+            let shadow_center = snap_point(Point::new(
+                center.x + layout.eye_radius * 0.10,
+                center.y + layout.eye_radius * 0.12,
+            ));
+            let shadow_radius = clamp_radius_inside_circle(
+                center,
+                inner_r,
+                shadow_center,
+                layout.eye_radius * 0.78,
             );
+            if shadow_radius > 0.0 {
+                frame.fill(&Path::circle(shadow_center, shadow_radius), shadow);
+            }
+
             frame.fill(
                 &Path::circle(
-                    Point::new(
+                    snap_point(Point::new(
                         center.x - layout.eye_radius * 0.18,
                         center.y - layout.eye_radius * 0.22,
+                    )),
+                    clamp_radius_inside_circle(
+                        center,
+                        inner_r,
+                        snap_point(Point::new(
+                            center.x - layout.eye_radius * 0.18,
+                            center.y - layout.eye_radius * 0.22,
+                        )),
+                        layout.eye_radius * 0.55,
                     ),
-                    layout.eye_radius * 0.55,
                 ),
                 highlight,
             );
